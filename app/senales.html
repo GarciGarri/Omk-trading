@@ -1,0 +1,565 @@
+<title>OMK Señales</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Mesa de operaciones: cabecera de estado, avisos abiertos arriba, mercados en rejilla, historial y estadística de reglas abajo */
+:root{
+  --bg:#f3f4f7; --panel:#ffffff; --ink:#151a2d; --muted:#5d6479; --line:#dde0e8; --soft:#eceef4;
+  --accent:#3542c8; --buy:#0b7d56; --buy-bg:#e2f4ec; --sell:#c03a26; --sell-bg:#fbe7e3; --warn:#9a6a00; --warn-bg:#fbf0d4;
+  --chart-grid:#e8eaf0; --e20:#d08a00; --e50:#3542c8; --e200:#8a8fa3;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Public Sans", "Segoe UI", system-ui, sans-serif;
+  --f-data:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1220; --panel:#171b2d; --ink:#e7e9f2; --muted:#9aa0b8; --line:#2a3048; --soft:#20253a;
+  --accent:#8c96ff; --buy:#3fcf98; --buy-bg:#14322a; --sell:#ff7f6b; --sell-bg:#3a1d1a; --warn:#f0c454; --warn-bg:#352a10;
+  --chart-grid:#232842; --e20:#f0b13c; --e50:#8c96ff; --e200:#6f7591; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1220; --panel:#171b2d; --ink:#e7e9f2; --muted:#9aa0b8; --line:#2a3048; --soft:#20253a;
+  --accent:#8c96ff; --buy:#3fcf98; --buy-bg:#14322a; --sell:#ff7f6b; --sell-bg:#3a1d1a; --warn:#f0c454; --warn-bg:#352a10;
+  --chart-grid:#232842; --e20:#f0b13c; --e50:#8c96ff; --e200:#6f7591; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;font-weight:700;letter-spacing:-.01em}
+h1{font-size:26px} h2{font-size:19px} h3{font-size:15px;font-weight:500}
+.num,td.n,.mono{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+button{font:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:16px}
+.brand{display:flex;flex-direction:column;gap:4px}
+.status{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--buy);margin-right:6px;vertical-align:middle}
+.dot.stale{background:var(--warn)}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.kpi .v{font-family:var(--f-data);font-size:22px;font-weight:500}
+.kpi .s{font-size:12px;color:var(--muted)}
+
+.section{display:flex;flex-direction:column;gap:12px}
+.sec-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
+
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.pill.buy{background:var(--buy-bg);color:var(--buy)} .pill.sell{background:var(--sell-bg);color:var(--sell)}
+.pill.win{background:var(--buy-bg);color:var(--buy)} .pill.loss{background:var(--sell-bg);color:var(--sell)}
+.pill.open{background:var(--warn-bg);color:var(--warn)} .pill.expired{background:var(--soft);color:var(--muted)}
+.pill.live{background:var(--accent);color:var(--panel)} .pill.bt{background:var(--soft);color:var(--muted)}
+
+.alerts{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.alert{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--buy);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.alert.sell{border-left-color:var(--sell)}
+.alert .row1{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.alert .asset{font-family:var(--f-display);font-size:17px;font-weight:700}
+.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.levels div{display:flex;flex-direction:column}
+.levels .num{font-size:14px}
+.progress{height:6px;border-radius:3px;background:var(--soft);position:relative;overflow:hidden}
+.progress span{position:absolute;top:0;bottom:0}
+.alert .why{font-size:13px;color:var(--muted)}
+.alert .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:6px 12px;font-size:13px;font-weight:500}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+.btn.primary:hover{opacity:.9;color:var(--panel)}
+.empty{background:var(--panel);border:1px dashed var(--line);border-radius:8px;padding:20px;color:var(--muted)}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px;text-align:left;color:var(--ink)}
+.tile:hover{border-color:var(--accent)}
+.tile.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.tile .t1{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.tile .nm{font-weight:600}
+.tile canvas{width:100%;height:46px;display:block}
+.tile .t2{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.up{color:var(--buy)} .down{color:var(--sell)}
+
+.detail{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.detail .dh{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline}
+.detail canvas{width:100%;height:320px;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.stats-inline{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px}
+
+.filters{display:flex;flex-wrap:wrap;gap:8px}
+select,input,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.table-wrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;background:var(--soft)}
+td.n,th.n{text-align:right}
+tr:last-child td{border-bottom:0}
+.more{display:flex;justify-content:center;padding:4px}
+
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;font-size:13px}
+.how div{display:flex;flex-direction:column;gap:4px;max-width:65ch}
+.how p{margin:0;color:var(--muted)}
+
+dialog{border:1px solid var(--line);border-radius:10px;padding:0;background:var(--panel);color:var(--ink);width:min(440px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(10,12,24,.45)}
+dialog form{display:flex;flex-direction:column;gap:12px;padding:18px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;gap:6px}
+.seg label{flex:1;border:1px solid var(--line);border-radius:6px;padding:6px;text-align:center;cursor:pointer}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg input:checked+span{color:var(--accent);font-weight:600}
+.seg label:has(input:checked){border-color:var(--accent)}
+.calc{font-size:13px;background:var(--soft);border-radius:6px;padding:8px 10px}
+.actions{display:flex;justify-content:flex-end;gap:8px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:13px}
+@media (max-width:520px){.levels{grid-template-columns:repeat(3,minmax(0,1fr))} .detail canvas{height:240px} h1{font-size:22px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>OMK Señales</h1>
+      <div class="status" id="status"><span><span class="dot stale"></span>Conectando con el escáner…</span></div>
+    </div>
+    <div class="legend" aria-label="Reglas activas">
+      <span>Stop 1,5 × ATR</span><span>Objetivo 3 × ATR (2R)</span><span>Caduca a las 30 velas</span>
+    </div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section class="section" aria-labelledby="h-alerts">
+    <div class="sec-head"><h2 id="h-alerts">Avisos abiertos</h2><span class="muted" id="alerts-note"></span></div>
+    <div class="alerts" id="alerts"><div class="empty">Los avisos aparecerán aquí en cuanto el escáner publique su primera pasada.</div></div>
+  </section>
+
+  <section class="section" aria-labelledby="h-mk">
+    <div class="sec-head"><h2 id="h-mk">Mercados</h2><span class="muted">Toca un activo para ver su gráfico con las señales</span></div>
+    <div class="tiles" id="tiles"></div>
+    <div class="detail" id="detail" hidden></div>
+  </section>
+
+  <section class="section" aria-labelledby="h-rules">
+    <div class="sec-head"><h2 id="h-rules">Qué regla funciona</h2><span class="muted">Con 2R de objetivo, el punto de equilibrio está en un 33 % de acierto</span></div>
+    <div class="table-wrap"><table id="rules-table"></table></div>
+  </section>
+
+  <section class="section" aria-labelledby="h-hist">
+    <div class="sec-head"><h2 id="h-hist">Historial de avisos</h2><span class="muted" id="hist-count"></span></div>
+    <div class="filters">
+      <select id="f-asset" aria-label="Activo"><option value="">Todos los activos</option></select>
+      <select id="f-rule" aria-label="Regla"><option value="">Todas las reglas</option></select>
+      <select id="f-src" aria-label="Origen">
+        <option value="">En vivo y backtest</option><option value="live">Solo en vivo</option><option value="backtest">Solo backtest</option><option value="mine">Solo las que operé</option>
+      </select>
+      <select id="f-status" aria-label="Resultado">
+        <option value="">Cualquier resultado</option><option value="open">Abierta</option><option value="win">Ganadora</option><option value="loss">Perdedora</option><option value="expired">Caducada</option>
+      </select>
+    </div>
+    <div class="table-wrap"><table id="hist"></table></div>
+    <div class="more"><button class="btn" id="more" hidden>Mostrar más</button></div>
+  </section>
+
+  <section class="section" aria-labelledby="h-how">
+    <h2 id="h-how">Cómo funciona</h2>
+    <div class="how">
+      <div><h3>1. Escaneo cada 4 horas</h3><p>Una tarea programada descarga las velas cerradas (4 h en cripto, diario en el resto), calcula EMA 20/50/200, RSI 14 y ATR 14 y comprueba las tres reglas. Si salta una señal nueva te llega un aviso al móvil.</p></div>
+      <div><h3>2. Tú decides y operas</h3><p>Cada aviso trae entrada, stop y objetivo calculados con la volatilidad (ATR). Si lo operas, pulsa «Registrar» y apunta tu precio real de entrada y salida.</p></div>
+      <div><h3>3. El resultado se mide solo</h3><p>El escáner sigue cada señal vela a vela: ganadora si toca antes el objetivo, perdedora si toca antes el stop, caducada si pasan 30 velas. Así ves qué reglas y activos funcionan de verdad.</p></div>
+      <div><h3>Backtest frente a en vivo</h3><p>Las señales anteriores a la puesta en marcha son backtest: sirven para comparar reglas, no prometen nada. Las «en vivo» son las que recibiste como aviso. Esto no es asesoramiento financiero.</p></div>
+    </div>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <form id="jform" method="dialog">
+    <div><h2 id="dlg-title">Mi operación</h2><div class="muted" id="dlg-sub"></div></div>
+    <div class="field"><span class="label">¿La operaste?</span>
+      <div class="seg">
+        <label><input type="radio" name="taken" value="yes" id="j-yes"><span>Sí</span></label>
+        <label><input type="radio" name="taken" value="no" id="j-no"><span>No</span></label>
+      </div>
+    </div>
+    <div class="field-row">
+      <label class="field"><span class="label">Precio de entrada</span><input id="j-entry" inputmode="decimal" autocomplete="off"></label>
+      <label class="field"><span class="label">Precio de salida</span><input id="j-exit" inputmode="decimal" autocomplete="off" placeholder="Vacío si sigue abierta"></label>
+    </div>
+    <label class="field"><span class="label">Importe invertido (€)</span><input id="j-amount" inputmode="decimal" autocomplete="off"></label>
+    <label class="field"><span class="label">Notas</span><textarea id="j-notes" rows="2"></textarea></label>
+    <div class="calc mono" id="j-calc">Rellena entrada y salida para calcular el resultado.</div>
+    <div class="actions">
+      <button type="button" class="btn" id="j-cancel">Cancelar</button>
+      <button type="submit" class="btn primary" id="j-save">Guardar</button>
+    </div>
+  </form>
+</dialog>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const RULE_NAMES = {
+  ema_cross: "Cruce EMA 20/50",
+  rsi_pullback: "Retroceso RSI",
+  breakout: "Ruptura 20 velas"
+};
+const STATUS_TXT = { open: "Abierta", win: "Ganadora", loss: "Perdedora", expired: "Caducada" };
+const S = { markets: {}, status: null, journal: {}, selected: null, histLimit: 40, db: null, canWrite: true };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function fmtP(x) {
+  if (x == null || isNaN(x)) return "—";
+  const a = Math.abs(x);
+  const d = a >= 1000 ? 0 : a >= 100 ? 2 : a >= 1 ? 2 : a >= 0.1 ? 4 : 6;
+  return Number(x).toLocaleString("es-ES", { minimumFractionDigits: d === 0 ? 0 : Math.min(d, 2), maximumFractionDigits: d === 0 ? 0 : d });
+}
+const fmtR = r => r == null ? "—" : (r > 0 ? "+" : "") + r.toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + " R";
+const fmtPct = p => p == null ? "—" : (p > 0 ? "+" : "") + p.toLocaleString("es-ES", { maximumFractionDigits: 2 }) + " %";
+const fmtT = t => new Date(t * 1000).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const fmtD = t => new Date(t * 1000).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "2-digit" });
+function ago(t) {
+  const m = Math.round((Date.now() / 1000 - t) / 60);
+  if (m < 60) return `hace ${m} min`;
+  const h = Math.round(m / 60);
+  return h < 48 ? `hace ${h} h` : `hace ${Math.round(h / 24)} días`;
+}
+function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2600); }
+
+function allSignals() {
+  const out = [];
+  for (const m of Object.values(S.markets)) for (const s of (m.signals || [])) out.push({ ...s, _m: m });
+  return out.sort((a, b) => b.t - a.t);
+}
+function myResult(j, s) {
+  if (!j || j.taken !== "yes") return null;
+  const e = parseFloat(j.entry), x = parseFloat(j.exit);
+  if (!e || !x) return null;
+  const d = s.side === "buy" ? 1 : -1;
+  const pct = d * (x - e) / e * 100;
+  const amt = parseFloat(j.amount);
+  return { pct, eur: amt ? amt * pct / 100 : null };
+}
+
+/* ---------- render ---------- */
+function renderStatus() {
+  const st = S.status, el = $("status");
+  const ms = Object.values(S.markets);
+  if (!ms.length) return;
+  const last = st?.last_run || Math.max(...ms.map(m => m.updated));
+  const stale = Date.now() / 1000 - last > 6 * 3600;
+  el.innerHTML = `<span><span class="dot ${stale ? "stale" : ""}"></span>Último escaneo ${ago(last)}</span>
+    <span>${ms.length} activos · cada 4 h</span>
+    ${st?.errors?.length ? `<span class="down">Fallos: ${esc(st.errors.join("; "))}</span>` : ""}`;
+}
+
+function stats(list) {
+  const closed = list.filter(s => s.status !== "open");
+  const wins = closed.filter(s => s.status === "win").length;
+  const rsum = closed.reduce((a, s) => a + (s.r || 0), 0);
+  return { n: closed.length, wins, rate: closed.length ? wins / closed.length * 100 : null, rsum, ravg: closed.length ? rsum / closed.length : null };
+}
+
+function renderKpis() {
+  const all = allSignals();
+  const open = all.filter(s => s.status === "open");
+  const live = stats(all.filter(s => s.source === "live"));
+  const bt = stats(all.filter(s => s.source === "backtest"));
+  const mine = all.map(s => ({ s, j: S.journal[s.id] })).filter(x => x.j?.taken === "yes");
+  const res = mine.map(x => myResult(x.j, x.s)).filter(Boolean);
+  const eur = res.reduce((a, r) => a + (r.eur || 0), 0);
+  const kp = [
+    ["Avisos abiertos", open.length, `${open.filter(s => s.side === "buy").length} compras · ${open.filter(s => s.side === "sell").length} ventas`],
+    ["Acierto en vivo", live.rate == null ? "—" : Math.round(live.rate) + " %", live.n ? `${live.wins} de ${live.n} · ${fmtR(+live.rsum.toFixed(1))}` : "Aún sin señales cerradas"],
+    ["Acierto backtest", bt.rate == null ? "—" : Math.round(bt.rate) + " %", `${bt.wins} de ${bt.n} · ${fmtR(+bt.rsum.toFixed(1))}`],
+    ["Mis operaciones", mine.length, res.length ? `${res.filter(r => r.pct > 0).length} en positivo · ${eur ? (eur > 0 ? "+" : "") + eur.toLocaleString("es-ES", { maximumFractionDigits: 0 }) + " €" : fmtPct(res.reduce((a, r) => a + r.pct, 0) / res.length) + " de media"}` : "Registra las que hagas"]
+  ];
+  $("kpis").innerHTML = kp.map(([l, v, s]) => `<div class="kpi"><span class="label">${l}</span><span class="v">${v}</span><span class="s">${s}</span></div>`).join("");
+}
+
+function progressBar(s) {
+  const lo = Math.min(s.sl, s.tp), hi = Math.max(s.sl, s.tp);
+  const pos = x => Math.max(0, Math.min(100, (x - lo) / (hi - lo) * 100));
+  const pe = pos(s.entry), pn = pos(s.price_now ?? s.entry);
+  const good = (s.r || 0) >= 0;
+  const a = Math.min(pe, pn), b = Math.max(pe, pn);
+  return `<div class="progress" title="Stop · entrada · objetivo"><span style="left:${a}%;width:${Math.max(b - a, 1)}%;background:var(--${good ? "buy" : "sell"})"></span><span style="left:${pe}%;width:2px;background:var(--ink)"></span></div>`;
+}
+
+function renderAlerts() {
+  const open = allSignals().filter(s => s.status === "open");
+  $("alerts-note").textContent = open.length ? "Precio y R actualizados en cada escaneo" : "";
+  if (!open.length) {
+    $("alerts").innerHTML = `<div class="empty">No hay avisos abiertos ahora mismo. Cuando una regla se cumpla en algún activo te llegará la notificación y aparecerá aquí.</div>`;
+    return;
+  }
+  $("alerts").innerHTML = open.map(s => {
+    const j = S.journal[s.id];
+    return `<article class="alert ${s.side}">
+      <div class="row1"><span class="asset">${esc(s._m.name)}</span>
+        <span style="display:flex;gap:6px"><span class="pill ${s.source === "live" ? "live" : "bt"}">${s.source === "live" ? "En vivo" : "Backtest"}</span><span class="pill ${s.side}">${s.side === "buy" ? "Compra" : "Venta"}</span></span></div>
+      <div class="muted" style="font-size:12px">${RULE_NAMES[s.rule]} · vela ${s._m.tf} · ${fmtT(s.t)}</div>
+      <div class="levels">
+        <div><span class="label">Entrada</span><span class="num">${fmtP(s.entry)}</span></div>
+        <div><span class="label">Stop</span><span class="num down">${fmtP(s.sl)}</span></div>
+        <div><span class="label">Objetivo</span><span class="num up">${fmtP(s.tp)}</span></div>
+      </div>
+      ${progressBar(s)}
+      <div class="why">${esc(s.why)}</div>
+      <div class="foot"><span class="mono">Ahora ${fmtP(s.price_now)} · <span class="${(s.r || 0) >= 0 ? "up" : "down"}">${fmtR(s.r)}</span></span>
+        <button class="btn" data-j="${esc(s.id)}">${j?.taken ? "Editar registro" : "Registrar"}</button></div>
+    </article>`;
+  }).join("");
+}
+
+function renderTiles() {
+  const ms = Object.values(S.markets).sort((a, b) => a.class.localeCompare(b.class) || a.name.localeCompare(b.name));
+  if (!ms.length) { $("tiles").innerHTML = `<div class="empty">Esperando la primera pasada del escáner.</div>`; return; }
+  if (!S.selected || !S.markets[S.selected]) S.selected = ms[0].id;
+  $("tiles").innerHTML = ms.map(m => {
+    const open = (m.signals || []).filter(s => s.status === "open");
+    return `<button class="tile ${m.id === S.selected ? "sel" : ""}" data-m="${esc(m.id)}" aria-pressed="${m.id === S.selected}">
+      <div class="t1"><span class="nm">${esc(m.name)}</span><span class="muted" style="font-size:12px">${esc(m.tf)}</span></div>
+      <div class="t1"><span class="num" style="font-size:16px">${fmtP(m.price)}</span><span class="num ${m.change >= 0 ? "up" : "down"}" style="font-size:12px">${fmtPct(m.change)}</span></div>
+      <canvas data-spark="${esc(m.id)}" aria-hidden="true"></canvas>
+      <div class="t2"><span>Tendencia ${m.trend} · RSI ${m.rsi.toLocaleString("es-ES")}</span>${open.length ? `<span class="pill open">${open.length} abierta${open.length > 1 ? "s" : ""}</span>` : ""}</div>
+    </button>`;
+  }).join("");
+  document.querySelectorAll("canvas[data-spark]").forEach(c => drawSpark(c, S.markets[c.dataset.spark]));
+}
+
+function setupCanvas(c) {
+  const r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  c.width = Math.max(1, r.width * dpr); c.height = Math.max(1, r.height * dpr);
+  const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { g, w: r.width, h: r.height };
+}
+
+function drawSpark(c, m) {
+  const { g, w, h } = setupCanvas(c);
+  const cl = m.candles.slice(-90).map(x => x[4]);
+  const e2 = m.ema.e200.slice(-90);
+  const vals = cl.concat(e2.filter(v => v != null));
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const y = v => h - 3 - (v - lo) / (hi - lo || 1) * (h - 6);
+  const x = i => i / (cl.length - 1) * w;
+  g.strokeStyle = css("--e200"); g.lineWidth = 1; g.setLineDash([3, 3]); g.beginPath();
+  e2.forEach((v, i) => v != null && (i ? g.lineTo(x(i), y(v)) : g.moveTo(x(i), y(v)))); g.stroke(); g.setLineDash([]);
+  const up = cl[cl.length - 1] >= cl[0];
+  const col = css(up ? "--buy" : "--sell");
+  g.beginPath(); cl.forEach((v, i) => i ? g.lineTo(x(i), y(v)) : g.moveTo(x(i), y(v)));
+  g.strokeStyle = col; g.lineWidth = 1.5; g.stroke();
+  g.lineTo(w, h); g.lineTo(0, h); g.closePath(); g.globalAlpha = .1; g.fillStyle = col; g.fill(); g.globalAlpha = 1;
+  g.beginPath(); g.arc(x(cl.length - 1), y(cl[cl.length - 1]), 2.5, 0, 7); g.fillStyle = col; g.fill();
+}
+
+function renderDetail() {
+  const m = S.markets[S.selected], el = $("detail");
+  if (!m) { el.hidden = true; return; }
+  el.hidden = false;
+  const st = stats(m.signals || []);
+  el.innerHTML = `<div class="dh"><div><h3 style="font-size:18px;font-family:var(--f-display);font-weight:700">${esc(m.name)} <span class="muted" style="font-size:13px;font-weight:400">${esc(m.symbol)} · velas ${esc(m.tf)} · ${esc(m.class)}</span></h3></div>
+      <div class="stats-inline mono"><span>Precio ${fmtP(m.price)}</span><span>RSI ${m.rsi}</span><span>ATR ${fmtP(m.atr)}</span><span>Acierto ${st.rate == null ? "—" : Math.round(st.rate) + " %"} (${st.n})</span><span>${fmtR(+st.rsum.toFixed(1))}</span></div></div>
+    <canvas id="big" role="img" aria-label="Gráfico de velas de ${esc(m.name)} con medias y señales"></canvas>
+    <div class="legend"><span><i style="background:var(--e20)"></i>EMA 20</span><span><i style="background:var(--e50)"></i>EMA 50</span><span><i style="background:var(--e200)"></i>EMA 200</span>
+      <span><b class="up">▲</b> compra</span><span><b class="down">▼</b> venta</span><span>Líneas discontinuas: entrada, stop y objetivo del aviso abierto</span><span id="hover" class="mono"></span></div>`;
+  drawBig($("big"), m);
+}
+
+function drawBig(c, m) {
+  const { g, w, h } = setupCanvas(c);
+  const N = w < 500 ? 70 : 140;
+  const cs = m.candles.slice(-N), off = m.candles.length - cs.length;
+  const em = k => m.ema[k].slice(off);
+  const open = (m.signals || []).filter(s => s.status === "open");
+  let lo = Math.min(...cs.map(x => x[3])), hi = Math.max(...cs.map(x => x[2]));
+  for (const k of ["e20", "e50", "e200"]) for (const v of em(k)) if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  for (const s of open) { lo = Math.min(lo, s.sl, s.tp); hi = Math.max(hi, s.sl, s.tp); }
+  const pad = (hi - lo) * .06; lo -= pad; hi += pad;
+  const R = 64, L = 4, T = 8, B = 22, pw = w - R - L, ph = h - T - B;
+  const y = v => T + (hi - v) / (hi - lo) * ph;
+  const bw = pw / cs.length, x = i => L + i * bw + bw / 2;
+  g.font = `11px ${css("--f-data")}`; g.textBaseline = "middle";
+  // rejilla y eje de precios
+  const step = niceStep((hi - lo) / 5);
+  g.strokeStyle = css("--chart-grid"); g.fillStyle = css("--muted"); g.lineWidth = 1;
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+    g.beginPath(); g.moveTo(L, y(v)); g.lineTo(L + pw, y(v)); g.stroke();
+    g.fillText(fmtP(v), L + pw + 6, y(v));
+  }
+  // fechas
+  g.textBaseline = "top";
+  const every = Math.ceil(cs.length / (w < 500 ? 3 : 6));
+  for (let i = 0; i < cs.length; i += every) { const lbl = fmtD(cs[i][0]); g.fillText(lbl, Math.min(x(i) - 20, L + pw - 60), T + ph + 6); }
+  // velas
+  const up = css("--buy"), dn = css("--sell");
+  cs.forEach((k, i) => {
+    const col = k[4] >= k[1] ? up : dn;
+    g.strokeStyle = col; g.fillStyle = col;
+    g.beginPath(); g.moveTo(x(i), y(k[2])); g.lineTo(x(i), y(k[3])); g.stroke();
+    const top = y(Math.max(k[1], k[4])), bh = Math.max(1, Math.abs(y(k[1]) - y(k[4])));
+    g.fillRect(x(i) - Math.max(1, bw * .35), top, Math.max(2, bw * .7), bh);
+  });
+  // medias
+  for (const [k, v] of [["e200", "--e200"], ["e50", "--e50"], ["e20", "--e20"]]) {
+    g.strokeStyle = css(v); g.lineWidth = 1.4; g.beginPath(); let st = false;
+    em(k).forEach((val, i) => { if (val == null) return; st ? g.lineTo(x(i), y(val)) : g.moveTo(x(i), y(val)); st = true; });
+    g.stroke();
+  }
+  // niveles del aviso abierto
+  g.setLineDash([5, 4]); g.lineWidth = 1; g.textBaseline = "middle";
+  for (const s of open) for (const [v, col] of [[s.entry, css("--ink")], [s.sl, dn], [s.tp, up]]) {
+    g.strokeStyle = col; g.beginPath(); g.moveTo(L, y(v)); g.lineTo(L + pw, y(v)); g.stroke();
+    g.fillStyle = css("--panel"); g.fillRect(L + pw + 2, y(v) - 8, R - 2, 16);
+    g.fillStyle = col; g.fillText(fmtP(v), L + pw + 6, y(v));
+  }
+  g.setLineDash([]);
+  // marcadores de señales
+  const tf = m.tf === "4h" ? 14400 : 86400;
+  for (const s of m.signals || []) {
+    const i = cs.findIndex(k => k[0] + tf === s.t);
+    if (i < 0) continue;
+    const buy = s.side === "buy", k = cs[i];
+    const yy = buy ? y(k[3]) + 10 : y(k[2]) - 10;
+    g.fillStyle = buy ? up : dn; g.beginPath();
+    if (buy) { g.moveTo(x(i), yy - 5); g.lineTo(x(i) - 5, yy + 4); g.lineTo(x(i) + 5, yy + 4); }
+    else { g.moveTo(x(i), yy + 5); g.lineTo(x(i) - 5, yy - 4); g.lineTo(x(i) + 5, yy - 4); }
+    g.closePath(); g.fill();
+  }
+  c.onmousemove = e => {
+    const r = c.getBoundingClientRect(), i = Math.floor((e.clientX - r.left - L) / bw);
+    const k = cs[i]; if (!k) return;
+    $("hover").textContent = `${fmtT(k[0])} · A ${fmtP(k[1])} · M ${fmtP(k[2])} · m ${fmtP(k[3])} · C ${fmtP(k[4])}`;
+  };
+}
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+  return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+}
+
+function renderRules() {
+  const all = allSignals();
+  const rows = [];
+  for (const rule of Object.keys(RULE_NAMES)) for (const side of ["buy", "sell"]) {
+    const sub = all.filter(s => s.rule === rule && s.side === side);
+    const b = stats(sub.filter(s => s.source === "backtest")), l = stats(sub.filter(s => s.source === "live"));
+    rows.push({ rule, side, b, l });
+  }
+  rows.sort((a, b) => (b.b.ravg ?? -9) - (a.b.ravg ?? -9));
+  const cell = st => st.n ? `<td class="n">${st.n}</td><td class="n">${Math.round(st.rate)} %</td><td class="n ${st.ravg >= 0 ? "up" : "down"}">${fmtR(+st.ravg.toFixed(2))}</td>` : `<td class="n muted">0</td><td class="n muted">—</td><td class="n muted">—</td>`;
+  $("rules-table").innerHTML = `<thead><tr><th>Regla</th><th>Lado</th><th class="n">Backtest</th><th class="n">Acierto</th><th class="n">R medio</th><th class="n">En vivo</th><th class="n">Acierto</th><th class="n">R medio</th></tr></thead>
+  <tbody>${rows.map(r => `<tr><td>${RULE_NAMES[r.rule]}</td><td><span class="pill ${r.side}">${r.side === "buy" ? "Compra" : "Venta"}</span></td>${cell(r.b)}${cell(r.l)}</tr>`).join("")}</tbody>`;
+}
+
+function fillFilters() {
+  const fa = $("f-asset"), fr = $("f-rule");
+  const cur = fa.value;
+  fa.innerHTML = `<option value="">Todos los activos</option>` + Object.values(S.markets).sort((a, b) => a.name.localeCompare(b.name)).map(m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join("");
+  fa.value = cur;
+  if (fr.options.length === 1) fr.innerHTML += Object.entries(RULE_NAMES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+}
+
+function renderHist() {
+  const fa = $("f-asset").value, fr = $("f-rule").value, fs = $("f-src").value, fst = $("f-status").value;
+  const list = allSignals().filter(s => (!fa || s.asset === fa) && (!fr || s.rule === fr) && (!fst || s.status === fst) &&
+    (!fs || (fs === "mine" ? S.journal[s.id]?.taken === "yes" : s.source === fs)));
+  $("hist-count").textContent = `${list.length} señales`;
+  const shown = list.slice(0, S.histLimit);
+  $("more").hidden = list.length <= S.histLimit;
+  $("hist").innerHTML = `<thead><tr><th>Fecha</th><th>Activo</th><th>Regla</th><th>Lado</th><th class="n">Entrada</th><th class="n">Stop</th><th class="n">Objetivo</th><th>Resultado</th><th class="n">R</th><th>Origen</th><th>Mi operación</th></tr></thead>
+  <tbody>${shown.map(s => {
+    const j = S.journal[s.id], mr = myResult(j, s);
+    const mine = j?.taken === "yes" ? (mr ? `<span class="${mr.pct >= 0 ? "up" : "down"} mono">${fmtPct(+mr.pct.toFixed(2))}</span>` : `<span class="muted">Abierta</span>`) : j?.taken === "no" ? `<span class="muted">No operada</span>` : "";
+    return `<tr><td class="mono">${fmtT(s.t)}</td><td>${esc(s._m.name)}</td><td>${RULE_NAMES[s.rule]}</td><td><span class="pill ${s.side}">${s.side === "buy" ? "Compra" : "Venta"}</span></td>
+    <td class="n">${fmtP(s.entry)}</td><td class="n">${fmtP(s.sl)}</td><td class="n">${fmtP(s.tp)}</td>
+    <td><span class="pill ${s.status}">${STATUS_TXT[s.status]}</span></td><td class="n ${(s.r || 0) >= 0 ? "up" : "down"}">${fmtR(s.r)}</td>
+    <td><span class="pill ${s.source === "live" ? "live" : "bt"}">${s.source === "live" ? "En vivo" : "Backtest"}</span></td>
+    <td>${mine} <button class="btn" style="padding:2px 8px;font-size:12px" data-j="${esc(s.id)}">${j?.taken ? "Editar" : "Registrar"}</button></td></tr>`;
+  }).join("") || `<tr><td colspan="11" class="muted">Ninguna señal coincide con estos filtros.</td></tr>`}</tbody>`;
+}
+
+function renderAll() {
+  renderStatus(); renderKpis(); renderAlerts(); renderTiles(); renderDetail(); renderRules(); fillFilters(); renderHist();
+}
+
+/* ---------- diario ---------- */
+let editing = null;
+function openJournal(id) {
+  const s = allSignals().find(x => x.id === id); if (!s) return;
+  editing = s;
+  const j = S.journal[id] || {};
+  $("dlg-title").textContent = `${s.side === "buy" ? "Compra" : "Venta"} ${s._m.name}`;
+  $("dlg-sub").textContent = `${RULE_NAMES[s.rule]} · ${fmtT(s.t)} · señal a ${fmtP(s.entry)}`;
+  $("j-yes").checked = j.taken !== "no"; $("j-no").checked = j.taken === "no";
+  $("j-entry").value = j.entry ?? s.entry; $("j-exit").value = j.exit ?? ""; $("j-amount").value = j.amount ?? ""; $("j-notes").value = j.notes ?? "";
+  calcJ();
+  if (!S.canWrite) toast("Este panel es de solo lectura para ti");
+  $("dlg").showModal();
+}
+const num = v => { const n = parseFloat(String(v).replace(",", ".")); return isNaN(n) ? null : n; };
+function calcJ() {
+  if (!editing) return;
+  const e = num($("j-entry").value), x = num($("j-exit").value), a = num($("j-amount").value);
+  if (!$("j-yes").checked) { $("j-calc").textContent = "Marcada como no operada. Cuenta igualmente en las estadísticas de la regla."; return; }
+  if (!e || !x) { $("j-calc").textContent = "Rellena entrada y salida para calcular el resultado."; return; }
+  const d = editing.side === "buy" ? 1 : -1, pct = d * (x - e) / e * 100;
+  $("j-calc").innerHTML = `Resultado <span class="${pct >= 0 ? "up" : "down"}">${fmtPct(+pct.toFixed(2))}</span>${a ? ` · ${(a * pct / 100 > 0 ? "+" : "") + (a * pct / 100).toLocaleString("es-ES", { maximumFractionDigits: 2 })} €` : ""}`;
+}
+["j-entry", "j-exit", "j-amount", "j-yes", "j-no"].forEach(id => $(id).addEventListener("input", calcJ));
+$("j-cancel").onclick = () => $("dlg").close();
+$("jform").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  if (!editing) return;
+  const data = {
+    taken: $("j-yes").checked ? "yes" : "no",
+    entry: num($("j-entry").value), exit: num($("j-exit").value), amount: num($("j-amount").value),
+    notes: $("j-notes").value.slice(0, 1000), asset: editing.asset, side: editing.side, rule: editing.rule, updated: Date.now()
+  };
+  if (!S.db) { toast("No hay conexión con la base de datos; no se ha guardado"); return; }
+  $("j-save").disabled = true;
+  try {
+    await S.db.collection("journal").doc(editing.id).set(data);
+    S.journal[editing.id] = data; $("dlg").close(); renderAll(); toast("Operación guardada");
+  } catch (e) {
+    toast(e?.code === "not_granted" ? "No tienes permiso para guardar en este panel" : "No se ha podido guardar. Inténtalo de nuevo.");
+  } finally { $("j-save").disabled = false; }
+});
+
+/* ---------- eventos ---------- */
+document.addEventListener("click", e => {
+  const j = e.target.closest("[data-j]"); if (j) { openJournal(j.dataset.j); return; }
+  const t = e.target.closest("[data-m]"); if (t) { S.selected = t.dataset.m; renderTiles(); renderDetail(); }
+});
+["f-asset", "f-rule", "f-src", "f-status"].forEach(id => $(id).addEventListener("change", () => { S.histLimit = 40; renderHist(); }));
+$("more").onclick = () => { S.histLimit += 60; renderHist(); };
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { renderTiles(); renderDetail(); }, 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { renderTiles(); renderDetail(); });
+new MutationObserver(() => { renderTiles(); renderDetail(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+/* ---------- datos ---------- */
+renderKpis(); renderTiles(); renderRules();
+(async () => {
+  const timer = setTimeout(() => {
+    if (!Object.keys(S.markets).length) $("status").innerHTML = `<span><span class="dot stale"></span>Sin datos todavía. Si acabas de abrir el panel, recarga en un momento.</span>`;
+  }, 10000);
+  const db = await window.claude?.use?.("db");
+  if (!db) {
+    clearTimeout(timer);
+    $("status").innerHTML = `<span><span class="dot stale"></span>Inicia sesión en claude.ai para ver los datos del escáner.</span>`;
+    return;
+  }
+  S.db = db;
+  const user = await window.claude.use("user");
+  try { const cw = user?.can?.("data.write"); if (cw === false) S.canWrite = false; } catch {}
+  db.collection("markets").onSnapshot(snap => {
+    clearTimeout(timer);
+    S.markets = {}; snap.docs.forEach(d => { const v = d.data(); if (v && v.candles) S.markets[d.id] = v; });
+    renderAll();
+  }, () => { clearTimeout(timer); $("status").innerHTML = `<span><span class="dot stale"></span>No se pudieron leer los datos del escáner.</span>`; });
+  db.doc("meta/status").onSnapshot(d => { S.status = d.exists ? d.data() : null; renderStatus(); }, () => {});
+  db.collection("journal").onSnapshot(snap => {
+    S.journal = {}; snap.docs.forEach(d => S.journal[d.id] = d.data());
+    renderKpis(); renderAlerts(); renderHist();
+  }, () => {});
+})();
+</script>

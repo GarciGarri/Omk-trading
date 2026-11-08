@@ -1,0 +1,15 @@
+{
+  "live_since": "2026-11-08T18:00:00Z",
+  "risk": { "atr_period": 14, "sl_atr": 1.5, "tp_atr": 3.0, "expiry_bars": 30 },
+  "assets": [
+    { "id": "BTCUSDT", "name": "Bitcoin",        "class": "Cripto",  "source": "binance", "symbol": "BTCUSDT", "tf": "4h" },
+    { "id": "ETHUSDT", "name": "Ethereum",       "class": "Cripto",  "source": "binance", "symbol": "ETHUSDT", "tf": "4h" },
+    { "id": "SOLUSDT", "name": "Solana",         "class": "Cripto",  "source": "binance", "symbol": "SOLUSDT", "tf": "4h" },
+    { "id": "SPY",     "name": "S&P 500 (SPY)",  "class": "Índice",  "source": "yahoo",   "symbol": "SPY",     "tf": "1d" },
+    { "id": "QQQ",     "name": "Nasdaq 100 (QQQ)","class": "Índice", "source": "yahoo",   "symbol": "QQQ",     "tf": "1d" },
+    { "id": "GLD",     "name": "Oro (GLD)",      "class": "Materia prima", "source": "yahoo", "symbol": "GLD", "tf": "1d" },
+    { "id": "NVDA",    "name": "NVIDIA",         "class": "Acción",  "source": "yahoo",   "symbol": "NVDA",    "tf": "1d" },
+    { "id": "AAPL",    "name": "Apple",          "class": "Acción",  "source": "yahoo",   "symbol": "AAPL",    "tf": "1d" },
+    { "id": "EURUSD",  "name": "EUR/USD",        "class": "Divisa",  "source": "yahoo",   "symbol": "EURUSD=X","tf": "1d" }
+  ]
+}
